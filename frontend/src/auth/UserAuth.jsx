@@ -5,7 +5,7 @@ import { UserContext } from '../context/user.context'
 const UserAuth = ({ children }) => {
 
     const { user } = useContext(UserContext)
-    const [ loading, setLoading ] = useState(true)
+    const [loading, setLoading] = useState(true)
     const token = localStorage.getItem('token')
     const navigate = useNavigate()
 

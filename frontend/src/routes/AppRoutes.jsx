@@ -3,9 +3,8 @@ import { Route, BrowserRouter, Routes } from 'react-router-dom'
 import Login from '../screens/Login'
 import Register from '../screens/Register'
 import Home from '../screens/Home'
-import UserAuth from '../auth/UserAuth'
 import Project from '../screens/Project'
-
+import UserAuth from '../auth/UserAuth'
 
 const AppRoutes = () => {
     return (

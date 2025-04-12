@@ -6,9 +6,9 @@ import { useNavigate } from 'react-router-dom'
 const Home = () => {
 
     const { user } = useContext(UserContext)
-    const [ isModalOpen, setIsModalOpen ] = useState(false)
-    const [ projectName, setProjectName ] = useState("")
-    const [ project, setProject ] = useState([])
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [projectName, setProjectName] = useState(null)
+    const [project, setProject] = useState([])
 
     const navigate = useNavigate()
 
@@ -29,19 +29,14 @@ const Home = () => {
     }
 
     useEffect(() => {
-      axios.get('/projects/all').then((res) => {
-          if (res.data && Array.isArray(res.data.projects)) {
-              setProject(res.data.projects)
-          } else {
-              setProject([]) // fallback to empty array  null
-          }
-      }).catch(err => {
-          console.log(err)
-          setProject([]) // fallback on error
-      })
-  }, [])
-  
-    console.log("project state:", project);
+        axios.get('/projects/all').then((res) => {
+            setProject(res.data.projects)
+
+        }).catch(err => {
+            console.log(err)
+        })
+
+    }, [])
 
     return (
         <main className='p-4'>
@@ -54,7 +49,7 @@ const Home = () => {
                 </button>
 
                 {
-                    Array.isArray(project) && project.map((project) => (
+                    project.map((project) => (
                         <div key={project._id}
                             onClick={() => {
                                 navigate(`/project`, {
