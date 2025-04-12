@@ -13,10 +13,8 @@ CodeCrafter AI is an AI-powered web-based assistant that helps developers automa
 - [Setup Instructions](#setup-instructions)
   - [Backend Setup](#backend-setup)
   - [Frontend Setup](#frontend-setup)
-- [Prompt Templates](#prompt-templates)
 - [Project Structure](#project-structure)
 - [Dependencies](#dependencies)
-- [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -26,29 +24,30 @@ CodeCrafter AI is an AI-powered web-based assistant that helps developers automa
 
 ## Presentation Slides
 
-👉 View our PPT (Link to be added)
+👉 View our PPT on [Canva](https://www.canva.com/design/DAGkaTsGrUY/pRVdcUnNBYq3eXFpqQzsdw/edit?utm_content=DAGkaTsGrUY&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 ---
 
-## Features
+## ✨ Features
 
-- ✍️ **Task Planning Agent** – Breaks down a dev task into subtasks
-- 💻 **Code Generation Agent** – Writes backend code using OpenAI/Gemini
-- 🧠 **Code Explanation Agent** – Explains code in simple terms
-- 🧪 **Test Generator Agent** – Generates Jest test cases (optional)
-- 🌐 **Clean Web UI** for task interaction and results
-- 🧩 **Modular backend agent architecture**
+- ✍️ **Task Planning** – Breaks down complex dev tasks into actionable subtasks
+- 💻 **Code Generation** – Uses Google Gemini API to generate backend code based on user prompts
+- 🧠 **Code Explanation** – Returns human-friendly explanations of code
+- 🧪 **Test Case Generator (Coming Soon)** – Generate Jest-based unit tests
+- 🧩 **Project Management** – Create projects, add users, and manage shared file trees
+- 🌐 **Sleek Web UI** – Interact with your coding assistant using a simple, fast React interface
+- 🧩 **Modular Service Architecture** – Scalable service layer for maintainable code
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: React.js, Tailwind CSS, Axios
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB Atlas (with Mongoose)
-- **Auth**: JWT, bcrypt.js
-- **Validation**: express-validator
-- **AI APIs**: OpenAI / Gemini (REST API, v2.0-flash)
+- **Frontend**: ⚛️ React.js, 🌬️ Tailwind CSS, 🔗 Axios
+- **Backend**: 🌐 Node.js, 🖥️ Express.js
+- **Database**: 🗄️ MongoDB Atlas (with Mongoose)
+- **Auth**: 🔑 JWT, 🛡️ bcrypt.js
+- **Validation**: ✅ express-validator
+- **AI APIs**: 🤖 OpenAI / Gemini (REST API, v2.0-flash)
 
 ---
 
@@ -101,12 +100,6 @@ cd NIT_Patna_ByteVerse
    ```bash
    npm run dev
    ```
-
----
-
-## Prompt Templates
-
-_(Add your prompt templates here if needed.)_
 
 ---
 
@@ -169,7 +162,6 @@ NIT_Patna_ByteVerse/
 - **axios**
 - **react-router-dom**
 - **tailwindcss**
-- **react-toastify**
 - **dotenv**
 
 ---
