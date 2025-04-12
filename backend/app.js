@@ -10,4 +10,8 @@ app.use(express.urlencoded({extended:true}));
 
 
 
-app.get('/')
+app.get('/', (req, res)=>{
+    res.send('Hello World!;');
+});
+
+export default app;
