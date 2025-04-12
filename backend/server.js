@@ -1,5 +1,4 @@
 import 'dotenv/config.js';
-// dotenv.config()
 import http from 'http';
 import app from './app.js';
  
