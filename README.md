@@ -28,7 +28,7 @@ CodeCrafter AI is an AI-powered web-based assistant that helps developers automa
 
 ---
 
-## ✨ Features
+## Features
 
 - ✍️ **Task Planning** – Breaks down complex dev tasks into actionable subtasks
 - 💻 **Code Generation** – Uses Google Gemini API to generate backend code based on user prompts
@@ -40,7 +40,7 @@ CodeCrafter AI is an AI-powered web-based assistant that helps developers automa
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: ⚛️ React.js, 🌬️ Tailwind CSS, 🔗 Axios
 - **Backend**: 🌐 Node.js, 🖥️ Express.js
