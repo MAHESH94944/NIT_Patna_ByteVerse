@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "../config/axios";
+import { UserContext } from '../context/user.context'
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const { setUser } = useContext(UserContext)
   const navigate = useNavigate();
 
   function submitHandler(e) {
@@ -50,7 +51,6 @@ const Register = () => {
             </label>
             <input
               onChange={(e) => setPassword(e.target.value)}
-              s
               type="password"
               id="password"
               className="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
