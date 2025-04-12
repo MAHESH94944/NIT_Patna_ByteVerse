@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 import userModel from "../models/user.model.js";
 import * as userService from "../services/user.service.js";
 import { validationResult } from "express-validator";
@@ -24,6 +22,8 @@ export const createUserController = async (req, res) => {
 };
 
 export const loginController = async (req, res) => {
+  const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
@@ -58,4 +58,3 @@ export const loginController = async (req, res) => {
     res.status(400).send(err.message);
   }
 };
->>>>>>> 68aaa58e7239446e276a9aca9723a32320df3589
