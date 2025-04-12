@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { UserContext } from "../context/user.context";
 
 const Home = () => {
-  const { user } = userContext(UserContext);
+  const { user } = useContext(UserContext);
   return <div>{JSON.stringify(user)}</div>;
 };
 
