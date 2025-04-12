@@ -2,10 +2,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY);
 
-// Make sure to use the updated model name "gemini-1.5-flash" or "gemini-1.5-pro" if available. 
-// For Gemini 2.0, it's typically "gemini-1.5-flash" or could be "gemini-2.0" if officially renamed.
+// Make sure to use the updated model name "gemini-2.0-flash" or "gemini-2.0-pro"
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash", // Update to "gemini-2.0" or "gemini-2.0-pro" if officially available
+  model: "gemini-2.0-flash", // Update to "gemini-2.0" or "gemini-2.0-pro" if officially available
   generationConfig: {
     responseMimeType: "application/json",
     temperature: 0.4,
@@ -50,7 +49,7 @@ app.listen(3000, () => {
   \"version\": \"1.0.0\",
   \"main\": \"index.js\",
   \"scripts\": {
-    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\"
+    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\""
   },
   \"dependencies\": {
     \"express\": \"^4.21.2\"
@@ -79,7 +78,7 @@ response: {
 </example>
 
 IMPORTANT: Do NOT use filenames like routes/index.js
-`
+`,
 });
 
 export const generateResult = async (prompt) => {
