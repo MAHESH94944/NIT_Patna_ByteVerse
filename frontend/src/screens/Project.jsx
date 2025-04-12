@@ -29,7 +29,7 @@ const Project = () => {
   const [project, setProject] = useState(location.state.project);
   const [message, setMessage] = useState('');
   const { user } = useContext(UserContext);
-  const messageBox = React.createRef();
+  const messageBox = useRef(null);
 
   const [users, setUsers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -43,18 +43,177 @@ const Project = () => {
   const [hasPackageJson, setHasPackageJson] = useState(false);
   const [isInstallingDeps, setIsInstallingDeps] = useState(false);
   const [outputLog, setOutputLog] = useState([]);
-  const [activeTab, setActiveTab] = useState('editor'); // 'editor' or 'terminal'
+  const [activeTab, setActiveTab] = useState('editor');
 
-  // Custom color theme
-  const theme = {
-    primary: '#6366f1',
-    secondary: '#8b5cf6',
-    dark: '#1e293b',
-    light: '#f8fafc',
-    success: '#10b981',
-    danger: '#ef4444',
-    warning: '#f59e0b',
-    info: '#3b82f6',
+  // New state for terminal input
+  const [terminalInput, setTerminalInput] = useState('');
+  const [terminalHistory, setTerminalHistory] = useState([]);
+  const terminalEndRef = useRef(null);
+
+  // Track installed dependencies
+  const [installedDependencies, setInstalledDependencies] = useState({});
+  const [isDependencyCacheValid, setIsDependencyCacheValid] = useState(false);
+
+  // File system operations state
+  const [newFileName, setNewFileName] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [isFile, setIsFile] = useState(true);
+
+  // Scroll terminal to bottom
+  const scrollTerminalToBottom = () => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Optimized dependency installation
+  const installDependencies = async (force = false) => {
+    if (!webContainer || !hasPackageJson) return false;
+
+    try {
+      // Check if we can skip installation
+      if (isDependencyCacheValid && !force) {
+        setOutputLog(prev => [...prev, "Using cached dependencies"]);
+        return true;
+      }
+
+      setIsInstallingDeps(true);
+      setOutputLog(prev => [...prev, "Installing dependencies..."]);
+
+      const installProcess = await webContainer.spawn("npm", ["install"]);
+      setOutputLog(prev => [...prev, "npm install started"]);
+
+      // Capture install output
+      const installOutput = [];
+      installProcess.output.pipeTo(new WritableStream({
+        write(chunk) {
+          const text = new TextDecoder().decode(chunk);
+          installOutput.push(text);
+          setOutputLog(prev => [...prev, text]);
+        }
+      }));
+
+      const exitCode = await installProcess.exit;
+      setIsInstallingDeps(false);
+
+      if (exitCode !== 0) {
+        setOutputLog(prev => [...prev, `Install failed with code ${exitCode}`]);
+        return false;
+      }
+
+      // Cache the installed dependencies
+      const packageJson = JSON.parse(fileTree['package.json'].file.contents);
+      setInstalledDependencies(packageJson.dependencies || {});
+      setIsDependencyCacheValid(true);
+
+      return true;
+    } catch (error) {
+      console.error('Install error:', error);
+      setOutputLog(prev => [...prev, `Install error: ${error.message}`]);
+      setIsInstallingDeps(false);
+      return false;
+    }
+  };
+
+  // Handle terminal commands
+  const handleTerminalCommand = async (command) => {
+    if (!command.trim()) return;
+
+    // Add command to history
+    setTerminalHistory(prev => [...prev, { type: 'command', text: command }]);
+    setTerminalInput('');
+
+    try {
+      const [cmd, ...args] = command.split(' ');
+
+      // Handle special commands
+      if (cmd === 'clear') {
+        setOutputLog([]);
+        return;
+      }
+
+      // Execute command in web container
+      const process = await webContainer.spawn(cmd, args);
+
+      // Capture output
+      process.output.pipeTo(new WritableStream({
+        write(chunk) {
+          const text = new TextDecoder().decode(chunk);
+          setOutputLog(prev => [...prev, text]);
+          setTerminalHistory(prev => [...prev, { type: 'output', text }]);
+        }
+      }));
+
+      const exitCode = await process.exit;
+      setTerminalHistory(prev => [...prev, {
+        type: 'exit',
+        text: `Process exited with code ${exitCode}`
+      }]);
+
+    } catch (error) {
+      setTerminalHistory(prev => [...prev, {
+        type: 'error',
+        text: `Error: ${error.message}`
+      }]);
+    }
+  };
+
+  // File system operations
+  const createFile = async () => {
+    if (!newFileName.trim()) return;
+
+    try {
+      const ft = { ...fileTree };
+      ft[newFileName] = { file: { contents: '' } };
+
+      setFileTree(ft);
+      saveFileTree(ft);
+      setNewFileName('');
+      setShowFileModal(false);
+
+      // Open the new file
+      setCurrentFile(newFileName);
+      setOpenFiles([...new Set([...openFiles, newFileName])]);
+
+    } catch (error) {
+      console.error('Error creating file:', error);
+    }
+  };
+
+  const createFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    try {
+      const ft = { ...fileTree };
+      ft[newFolderName] = { directory: {} };
+
+      setFileTree(ft);
+      saveFileTree(ft);
+      setNewFolderName('');
+      setShowFolderModal(false);
+
+    } catch (error) {
+      console.error('Error creating folder:', error);
+    }
+  };
+
+  const deleteFile = async (filename) => {
+    try {
+      const ft = { ...fileTree };
+      delete ft[filename];
+
+      setFileTree(ft);
+      saveFileTree(ft);
+
+      // Close if open
+      setOpenFiles(openFiles.filter(f => f !== filename));
+      if (currentFile === filename) {
+        setCurrentFile(openFiles.length > 1 ? openFiles[0] : null);
+      }
+
+    } catch (error) {
+      console.error('Error deleting file:', error);
+    }
   };
 
   const handleUserClick = (id) => {
@@ -123,45 +282,6 @@ const Project = () => {
     return hasPackage;
   };
 
-  const installDependencies = async () => {
-    if (!webContainer || !hasPackageJson) return false;
-
-    try {
-      setIsInstallingDeps(true);
-      setOutputLog(prev => [...prev, "Installing dependencies..."]);
-
-      const installProcess = await webContainer.spawn("npm", ["install"]);
-
-      // Capture install output
-      const installOutput = [];
-      const reader = installProcess.output.getReader();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const text = typeof value === 'string' ? value : new TextDecoder().decode(value);
-        installOutput.push(text);
-        setOutputLog(prev => [...prev, text]);
-      }
-
-      const exitCode = await installProcess.exit;
-      setIsInstallingDeps(false);
-
-      if (exitCode !== 0) {
-        setOutputLog(prev => [...prev, `Install failed with code ${exitCode}`]);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Install error:', error);
-      setOutputLog(prev => [...prev, `Install error: ${error.message}`]);
-      setIsInstallingDeps(false);
-      return false;
-    }
-  };
-
   const handleProcessOutput = async (process) => {
     const reader = process.output.getReader();
 
@@ -173,60 +293,6 @@ const Project = () => {
       setOutputLog(prev => [...prev, text]);
     }
   };
-
-  useEffect(() => {
-    initializeSocket(project._id);
-
-    const initWebContainer = async () => {
-      try {
-        const container = await getWebContainer();
-        setWebContainer(container);
-        setIsWebContainerReady(true);
-        console.log("WebContainer initialized");
-      } catch (error) {
-        console.error("Failed to initialize web container:", error);
-      }
-    };
-
-    initWebContainer();
-
-    receiveMessage('project-message', data => {
-      if (data.sender._id === 'ai') {
-        const message = JSON.parse(data.message);
-        if (isWebContainerReady && webContainer) {
-          webContainer.mount(message.fileTree);
-        }
-        if (message.fileTree) {
-          setFileTree(message.fileTree || {});
-          checkForPackageJson(message.fileTree);
-        }
-        setMessages(prevMessages => [...prevMessages, data]);
-      } else {
-        setMessages(prevMessages => [...prevMessages, data]);
-      }
-      scrollToBottom();
-    });
-
-    axios.get(`/projects/get-project/${location.state.project._id}`).then(res => {
-      setProject(res.data.project);
-      const initialFileTree = res.data.project.fileTree || {};
-      setFileTree(initialFileTree);
-      checkForPackageJson(initialFileTree);
-    });
-
-    axios.get('/users/all').then(res => {
-      setUsers(res.data.users);
-    }).catch(err => {
-      console.log(err);
-    });
-
-    // Cleanup function
-    return () => {
-      if (runProcess) {
-        runProcess.kill();
-      }
-    };
-  }, []);
 
   function saveFileTree(ft) {
     axios.put('/projects/update-file-tree', {
@@ -280,6 +346,247 @@ const Project = () => {
       setOutputLog(prev => [...prev, `Error: ${error.message}`]);
     }
   };
+
+  useEffect(() => {
+    initializeSocket(project._id);
+
+    const initWebContainer = async () => {
+      try {
+        const container = await getWebContainer();
+        setWebContainer(container);
+        setIsWebContainerReady(true);
+
+        // Check for existing node_modules to skip reinstallation
+        const hasNodeModules = await container.fs.readdir('/').then(files =>
+          files.includes('node_modules')
+        );
+        setIsDependencyCacheValid(hasNodeModules);
+
+        console.log("WebContainer initialized");
+      } catch (error) {
+        console.error("Failed to initialize web container:", error);
+      }
+    };
+
+    initWebContainer();
+
+    receiveMessage('project-message', data => {
+      if (data.sender._id === 'ai') {
+        const message = JSON.parse(data.message);
+        if (isWebContainerReady && webContainer) {
+          webContainer.mount(message.fileTree);
+        }
+        if (message.fileTree) {
+          setFileTree(message.fileTree || {});
+          checkForPackageJson(message.fileTree);
+        }
+        setMessages(prevMessages => [...prevMessages, data]);
+      } else {
+        setMessages(prevMessages => [...prevMessages, data]);
+      }
+      scrollToBottom();
+    });
+
+    axios.get(`/projects/get-project/${location.state.project._id}`).then(res => {
+      setProject(res.data.project);
+      const initialFileTree = res.data.project.fileTree || {};
+      setFileTree(initialFileTree);
+      checkForPackageJson(initialFileTree);
+    });
+
+    axios.get('/users/all').then(res => {
+      setUsers(res.data.users);
+    }).catch(err => {
+      console.log(err);
+    });
+
+    // Cleanup function
+    return () => {
+      if (runProcess) {
+        runProcess.kill();
+      }
+    };
+  }, []);
+
+  // Update the file explorer section to include create/delete options
+  const renderFileExplorer = () => (
+    <div className="explorer h-full w-56 bg-gray-50 border-r border-gray-200 flex flex-col">
+      <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+        <h2 className='font-medium text-gray-700 flex items-center gap-2'>
+          <i className="ri-folder-open-line"></i>
+          <span>Files</span>
+        </h2>
+        <div className="flex gap-1">
+          <button
+            onClick={() => { setIsFile(true); setShowFileModal(true); }}
+            className='text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-200'
+            title="New File"
+          >
+            <i className="ri-file-add-line"></i>
+          </button>
+          <button
+            onClick={() => { setIsFile(false); setShowFolderModal(true); }}
+            className='text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-200'
+            title="New Folder"
+          >
+            <i className="ri-folder-add-line"></i>
+          </button>
+        </div>
+      </div>
+      <div className="file-tree flex-grow overflow-y-auto">
+        {Object.keys(fileTree).map((file, index) => (
+          <div
+            key={index}
+            className="group flex items-center"
+          >
+            <div
+              onClick={() => {
+                if (!fileTree[file].directory) { // Only open if it's a file
+                  setCurrentFile(file);
+                  setOpenFiles([...new Set([...openFiles, file])]);
+                }
+              }}
+              className={`file-item flex-1 cursor-pointer px-4 py-2 flex items-center gap-2 ${currentFile === file ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-700'
+                } transition-colors`}
+            >
+              <i className={`ri-${fileTree[file].directory ? 'folder-line' :
+                file.endsWith('.js') ? 'javascript-line' :
+                  file.endsWith('.json') ? 'code-box-line' :
+                    file.endsWith('.html') ? 'html5-line' :
+                      file.endsWith('.css') ? 'css3-line' :
+                        'file-line'
+                }`}></i>
+              <span className='truncate'>{file}</span>
+            </div>
+            {!fileTree[file].directory && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteFile(file);
+                }}
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1 mr-2 transition-opacity"
+              >
+                <i className="ri-close-line text-sm"></i>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Update the terminal rendering to include input
+  const renderTerminal = () => (
+    <div className="terminal h-full bg-gray-900 text-green-400 p-4 overflow-auto font-mono text-sm flex flex-col">
+      <div className="terminal-header flex items-center gap-2 mb-3">
+        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+        <span className="text-gray-400 ml-2">Terminal</span>
+      </div>
+
+      <div className="terminal-content flex-grow overflow-y-auto mb-2">
+        {terminalHistory.map((item, index) => (
+          <div key={index} className="terminal-line mb-1">
+            {item.type === 'command' && (
+              <div className="text-blue-400">$ {item.text}</div>
+            )}
+            {item.type === 'output' && (
+              <div>{item.text}</div>
+            )}
+            {item.type === 'error' && (
+              <div className="text-red-400">{item.text}</div>
+            )}
+            {item.type === 'exit' && (
+              <div className="text-yellow-400">{item.text}</div>
+            )}
+          </div>
+        ))}
+        <div ref={terminalEndRef} />
+      </div>
+
+      <div className="terminal-input flex items-center">
+        <span className="text-blue-400 mr-2">$</span>
+        <input
+          type="text"
+          value={terminalInput}
+          onChange={(e) => setTerminalInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleTerminalCommand(terminalInput);
+            }
+          }}
+          className="flex-grow bg-transparent text-green-400 outline-none"
+          placeholder="Enter command..."
+        />
+      </div>
+    </div>
+  );
+
+  // Add modals for file/folder creation
+  const renderFileModals = () => (
+    <>
+      {/* New File Modal */}
+      {showFileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-medium mb-4">Create New File</h3>
+            <input
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder="Enter filename (e.g., index.js)"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowFileModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFile}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Folder Modal */}
+      {showFolderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-medium mb-4">Create New Folder</h3>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Enter folder name"
+              className="w-full p-2 border rounded mb-4"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowFolderModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createFolder}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <main className='h-screen w-screen flex bg-gray-100 overflow-hidden'>
@@ -392,41 +699,8 @@ const Project = () => {
 
       {/* Right panel - code editor section */}
       <section className="right flex-grow h-full flex bg-white">
-        {/* File explorer */}
-        <div className="explorer h-full w-56 bg-gray-50 border-r border-gray-200 flex flex-col">
-          <div className="p-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-            <h2 className='font-medium text-gray-700 flex items-center gap-2'>
-              <i className="ri-folder-open-line"></i>
-              <span>Files</span>
-            </h2>
-            <button className='text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-gray-200'>
-              <i className="ri-add-line"></i>
-            </button>
-          </div>
-          <div className="file-tree flex-grow overflow-y-auto">
-            {Object.keys(fileTree).map((file, index) => (
-              <div
-                key={index}
-                onClick={() => {
-                  setCurrentFile(file);
-                  setOpenFiles([...new Set([...openFiles, file])]);
-                }}
-                className={`file-item cursor-pointer px-4 py-2 flex items-center gap-2 ${currentFile === file ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-100 text-gray-700'
-                  } transition-colors`}
-              >
-                <i className={`ri-${file.endsWith('.js') ? 'javascript-line' :
-                  file.endsWith('.json') ? 'code-box-line' :
-                    file.endsWith('.html') ? 'html5-line' :
-                      file.endsWith('.css') ? 'css3-line' :
-                        'file-line'
-                  }`}></i>
-                <span className='truncate'>{file}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        {renderFileExplorer()}
 
-        {/* Code editor and terminal */}
         <div className="code-editor flex flex-col flex-grow h-full">
           {/* Editor tabs */}
           <div className="tabs flex justify-between w-full bg-gray-50 border-b border-gray-200">
@@ -501,7 +775,6 @@ const Project = () => {
 
           {/* Editor/terminal content */}
           <div className="flex flex-col flex-grow max-w-full shrink overflow-hidden bg-white">
-            {/* Code editor area */}
             {activeTab === 'editor' && (
               <div className="code-editor-area h-full overflow-auto flex-grow">
                 {fileTree[currentFile] ? (
@@ -544,34 +817,7 @@ const Project = () => {
             )}
 
             {/* Terminal output */}
-            {activeTab === 'terminal' && (
-              <div className="terminal h-full bg-gray-900 text-green-400 p-4 overflow-auto font-mono text-sm">
-                <div className="terminal-header flex items-center gap-2 mb-3">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-gray-400 ml-2">Terminal</span>
-                </div>
-                {outputLog.length > 0 ? (
-                  outputLog.map((line, index) => (
-                    <div key={index} className="terminal-line">
-                      {line.startsWith('Error') || line.startsWith('npm ERR') ? (
-                        <span className="text-red-400">{line}</span>
-                      ) : line.startsWith('Warning') ? (
-                        <span className="text-yellow-400">{line}</span>
-                      ) : (
-                        <span>{line}</span>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-gray-500">
-                    <p>Output will appear here when you run your project...</p>
-                    <p className="mt-2 text-gray-600">Try clicking the "Run" button above</p>
-                  </div>
-                )}
-              </div>
-            )}
+            {activeTab === 'terminal' && renderTerminal()}
           </div>
         </div>
 
@@ -684,6 +930,9 @@ const Project = () => {
           </div>
         </div>
       )}
+
+      {/* Render file/folder modals */}
+      {renderFileModals()}
     </main>
   );
 };
