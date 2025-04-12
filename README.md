@@ -173,7 +173,3 @@ NIT_Patna_ByteVerse/
 - **dotenv**
 
 ---
-
-## Acknowledgments
-
-- _(Mention any libraries, inspirations, or contributors here.)_
