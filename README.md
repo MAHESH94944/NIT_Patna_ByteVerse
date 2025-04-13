@@ -20,7 +20,7 @@ CodeCrafter AI is an AI-powered web-based assistant that helps developers automa
 
 ## Demo Video
 
-👉 Watch our demo (Link to be added after recording)
+👉 Watch our demo [Demo](https://drive.google.com/drive/folders/1QIPLOQKvZxfboMw55VKMOQcQOtBJ1bur)
 
 ## Presentation Slides
 

@@ -7,6 +7,7 @@ const Home = () => {
   const { user } = useContext(UserContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [projectTemplate, setProjectTemplate] = useState("");
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ const Home = () => {
     axios
       .post("/projects/create", {
         name: projectName,
+        template: projectTemplate
       })
       .then((res) => {
         const newProject = {
@@ -40,6 +42,7 @@ const Home = () => {
         setProjects([...projects, newProject]);
         setIsModalOpen(false);
         setProjectName("");
+        setProjectTemplate("");
       })
       .catch((error) => {
         console.log(error);
@@ -196,6 +199,7 @@ const Home = () => {
                 onClick={() => {
                   setIsModalOpen(false);
                   setProjectName("");
+                  setProjectTemplate("");
                 }}
                 className="text-purple-200 hover:text-white transition-colors"
               >
@@ -217,6 +221,23 @@ const Home = () => {
                   required
                 />
               </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-purple-200 mb-2">
+                  Project Template
+                </label>
+                <select
+                  onChange={(e) => setProjectTemplate(e.target.value)}
+                  value={projectTemplate}
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-purple-50 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Custom (Empty)</option>
+                  <option value="react-app">React Application</option>
+                  <option value="node-server">Node.js Server</option>
+                  <option value="fullstack">Fullstack MERN</option>
+                </select>
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
@@ -224,6 +245,7 @@ const Home = () => {
                   onClick={() => {
                     setIsModalOpen(false);
                     setProjectName("");
+                    setProjectTemplate("");
                   }}
                 >
                   Cancel
