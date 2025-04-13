@@ -81,12 +81,56 @@ IMPORTANT: Do NOT use filenames like routes/index.js
 `,
 });
 
-export const generateResult = async (prompt) => {
+export const generateResult = async (prompt, context = {}) => {
   try {
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const chat = model.startChat({
+      history: context.history || [],
+    });
+
+    const result = await chat.sendMessage(prompt);
+    const response = await result.response;
+
+    return {
+      text: response.text(),
+      metadata: {
+        type: response.candidates[0].content.role,
+        suggestions: extractCodeSuggestions(response.text()),
+      },
+    };
   } catch (error) {
-    console.error("Error generating result:", error.message);
-    return "An error occurred while generating the response.";
+    console.error("AI Error:", error);
+    return {
+      text: "Sorry, I encountered an error. Please try again.",
+      error: true,
+    };
   }
+};
+
+function extractCodeSuggestions(text) {
+  // Extract code blocks and suggestions from AI response
+  const codeBlocks = text.match(/```[\s\S]*?```/g) || [];
+  return {
+    codeBlocks,
+    quickFixes: text.match(/Suggested fix:.*?(?=\n|$)/gi) || [],
+  };
+}
+
+// New AI functions
+export const generateDocumentation = async (code) => {
+  const prompt = `Generate comprehensive documentation for this code:\n\n${code}\n\nInclude:
+  - Function descriptions
+  - Parameter details
+  - Return values
+  - Usage examples`;
+
+  return generateResult(prompt);
+};
+
+export const optimizeCode = async (code) => {
+  const prompt = `Optimize this code for better performance and readability:\n\n${code}\n\nProvide:
+  - Optimized version
+  - Explanation of changes
+  - Performance impact`;
+
+  return generateResult(prompt);
 };

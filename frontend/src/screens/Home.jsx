@@ -11,29 +11,19 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Function to generate a consistent color based on project name
   const getProjectColor = (name) => {
-    // Create a hash from the project name
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-
-    // Generate HSL color values
     const h = Math.abs(hash) % 360;
-    const s = 70 + (Math.abs(hash) % 15); // 70-85% saturation
-    const l = 85 + (Math.abs(hash) % 10); // 85-95% lightness (pastel)
-
-    return `hsl(${h}, ${s}%, ${l}%)`;
+    return `hsl(${h}, 80%, 90%)`;
   };
 
-  // Function to generate a darker version for borders/hover
   const getDarkerColor = (hslColor) => {
     const values = hslColor.match(/\d+/g);
     const h = values[0];
-    const s = values[1];
-    const l = Math.max(70, parseInt(values[2]) - 15); // Darken but keep it light
-    return `hsl(${h}, ${s}%, ${l}%)`;
+    return `hsl(${h}, 70%, 80%)`;
   };
 
   function createProject(e) {
@@ -43,13 +33,31 @@ const Home = () => {
         name: projectName,
       })
       .then((res) => {
-        setProjects([...projects, res.data.project]);
+        const newProject = {
+          ...res.data.project,
+          createdAt: res.data.project.createdAt || new Date().toISOString(),
+        };
+        setProjects([...projects, newProject]);
         setIsModalOpen(false);
         setProjectName("");
       })
       .catch((error) => {
         console.log(error);
       });
+  }
+
+  function deleteProject(id) {
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      axios
+        .delete(`/projects/${id}`)
+        .then(() => {
+          setProjects(projects.filter((project) => project._id !== id));
+        })
+        .catch((error) => {
+          console.log("Failed to delete project:", error);
+          alert("Failed to delete project. Please try again.");
+        });
+    }
   }
 
   useEffect(() => {
@@ -67,12 +75,14 @@ const Home = () => {
   }, []);
 
   return (
-    <main className="p-6 max-w-7xl mx-auto">
+    <main className="min-h-screen p-6 max-w-7xl mx-auto bg-gradient-to-br from-purple-900 via-violet-900 to-fuchsia-900">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">My Projects</h1>
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">
+          My Projects
+        </h1>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-all duration-300 hover:shadow-lg"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg shadow-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/30"
         >
           <i className="ri-add-line"></i>
           New Project
@@ -84,24 +94,24 @@ const Home = () => {
           {[...Array(4)].map((_, index) => (
             <div
               key={index}
-              className="bg-gray-100 rounded-xl p-6 h-40 animate-pulse"
+              className="bg-white/10 rounded-xl p-6 h-40 animate-pulse"
             ></div>
           ))}
         </div>
       ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="bg-blue-100 p-6 rounded-full mb-4">
-            <i className="ri-folder-open-line text-4xl text-blue-600"></i>
+          <div className="bg-white/20 p-6 rounded-full mb-4">
+            <i className="ri-folder-open-line text-4xl text-purple-300"></i>
           </div>
-          <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+          <h2 className="text-2xl font-semibold text-purple-100 mb-2">
             No projects yet
           </h2>
-          <p className="text-gray-500 mb-6">
+          <p className="text-purple-200/80 mb-6">
             Get started by creating your first project
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors shadow-md"
           >
             Create Project
           </button>
@@ -110,10 +120,10 @@ const Home = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <div
             onClick={() => setIsModalOpen(true)}
-            className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-6 h-40 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
+            className="flex flex-col items-center justify-center border-2 border-dashed border-purple-300/50 rounded-xl p-6 h-40 cursor-pointer hover:border-purple-400 hover:bg-white/10 transition-all duration-200 group"
           >
-            <i className="ri-add-line text-3xl text-gray-400 group-hover:text-blue-500 mb-2"></i>
-            <span className="text-gray-500 group-hover:text-blue-600">
+            <i className="ri-add-line text-3xl text-purple-300/70 group-hover:text-purple-200 mb-2"></i>
+            <span className="text-purple-200/80 group-hover:text-purple-100">
               New Project
             </span>
           </div>
@@ -126,31 +136,43 @@ const Home = () => {
               <div
                 key={project._id}
                 onClick={() => navigate(`/project`, { state: { project } })}
-                className="rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-40 flex flex-col justify-between"
+                className="rounded-xl p-6 hover:shadow-lg transition-all duration-300 cursor-pointer h-40 flex flex-col justify-between"
                 style={{
                   backgroundColor: bgColor,
                   border: `1px solid ${borderColor}`,
-                  boxShadow: `0 2px 4px ${borderColor}20`,
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
                 }}
               >
                 <div>
                   <h2 className="font-semibold text-lg text-gray-800 line-clamp-1">
                     {project.name}
                   </h2>
-                  <p className="text-sm text-gray-700 mt-1">
+                  <p className="text-sm text-gray-600 mt-1">
                     Created {new Date(project.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-2 bg-white/50 px-2 py-1 rounded-full">
+                  <div className="flex items-center gap-2 bg-white/80 px-2 py-1 rounded-full backdrop-blur-sm">
                     <i className="ri-user-line text-gray-600"></i>
                     <span className="text-sm text-gray-700">
                       {project.users.length}{" "}
                       {project.users.length === 1 ? "member" : "members"}
                     </span>
                   </div>
-                  <div className="bg-white/50 p-1 rounded-full">
-                    <i className="ri-arrow-right-s-line text-gray-600"></i>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProject(project._id);
+                      }}
+                      className="bg-white/80 p-1 rounded-full backdrop-blur-sm hover:bg-red-500/80 transition-colors"
+                      title="Delete Project"
+                    >
+                      <i className="ri-delete-bin-line text-gray-600 hover:text-white"></i>
+                    </button>
+                    <div className="bg-white/80 p-1 rounded-full backdrop-blur-sm">
+                      <i className="ri-arrow-right-s-line text-gray-600"></i>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -161,13 +183,13 @@ const Home = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50 backdrop-blur-sm">
           <div
-            className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md animate-fade-in"
+            className="bg-gradient-to-br from-purple-900/90 to-violet-900/90 p-8 rounded-xl shadow-2xl w-full max-w-md border border-white/20"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold text-gray-800">
+              <h2 className="text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">
                 Create New Project
               </h2>
               <button
@@ -175,21 +197,21 @@ const Home = () => {
                   setIsModalOpen(false);
                   setProjectName("");
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-purple-200 hover:text-white transition-colors"
               >
                 <i className="ri-close-line text-2xl"></i>
               </button>
             </div>
             <form onSubmit={createProject}>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-purple-200 mb-2">
                   Project Name
                 </label>
                 <input
                   onChange={(e) => setProjectName(e.target.value)}
                   value={projectName}
                   type="text"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-purple-50 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all placeholder-purple-200/50"
                   placeholder="My Awesome Project"
                   autoFocus
                   required
@@ -198,7 +220,7 @@ const Home = () => {
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  className="px-5 py-2.5 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-5 py-2.5 text-purple-100 bg-white/10 rounded-lg hover:bg-white/20 transition-colors border border-white/20"
                   onClick={() => {
                     setIsModalOpen(false);
                     setProjectName("");
@@ -208,7 +230,7 @@ const Home = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors disabled:opacity-50"
                   disabled={!projectName.trim()}
                 >
                   Create Project

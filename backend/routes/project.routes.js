@@ -41,4 +41,34 @@ router.put(
   projectController.updateFileTree
 );
 
+// Add this route at the end of the file, before the export
+router.delete("/:id", authMiddleWare.authUser, projectController.deleteProject);
+
+// Add these to your existing routes
+router.post(
+  "/generate-docs",
+  authMiddleWare.authUser,
+  body("code").isString().withMessage("Code is required"),
+  projectController.generateDocs
+);
+
+router.post(
+  "/optimize-code",
+  authMiddleWare.authUser,
+  body("code").isString().withMessage("Code is required"),
+  projectController.optimizeCode
+);
+
+router.get(
+  "/:projectId/analytics",
+  authMiddleWare.authUser,
+  projectController.getProjectAnalytics
+);
+
+router.get(
+  "/templates",
+  authMiddleWare.authUser,
+  projectController.getAvailableTemplates
+);
+
 export default router;

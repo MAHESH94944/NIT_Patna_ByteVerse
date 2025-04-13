@@ -200,6 +200,11 @@ const Project = () => {
     return saved !== null ? JSON.parse(saved) : true;
   });
 
+  // Collaboration state
+  const [collaborators, setCollaborators] = useState([]);
+  const [presence, setPresence] = useState({});
+  const [socket, setSocket] = useState(null);
+
   // VS Code-like theme colors
   const theme = {
     dark: {
@@ -249,6 +254,49 @@ const Project = () => {
   };
 
   const currentTheme = darkMode ? theme.dark : theme.light;
+
+  // Add cursor tracking to editor
+  const handleEditorCursorChange = (position) => {
+    if (socket) {
+      socket.emit("cursor-position", position);
+    }
+  };
+
+  // Collaboration effects
+  useEffect(() => {
+    if (!socket) return;
+
+    const onUserConnected = (user) => {
+      setCollaborators(prev => [...prev, user.userId]);
+      setPresence(prev => ({
+        ...prev,
+        [user.userId]: { active: true, lastSeen: new Date() }
+      }));
+    };
+
+    const onUserDisconnected = (user) => {
+      setPresence(prev => ({
+        ...prev,
+        [user.userId]: { active: false, lastSeen: new Date() }
+      }));
+    };
+
+    const onUserCursorUpdate = ({ userId, position }) => {
+      // Display other users' cursors in the editor
+      // Implementation depends on your editor component
+      console.log(`User ${userId} cursor at:`, position);
+    };
+
+    socket.on("user-connected", onUserConnected);
+    socket.on("user-disconnected", onUserDisconnected);
+    socket.on("user-cursor-update", onUserCursorUpdate);
+
+    return () => {
+      socket.off("user-connected", onUserConnected);
+      socket.off("user-disconnected", onUserDisconnected);
+      socket.off("user-cursor-update", onUserCursorUpdate);
+    };
+  }, [socket]);
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -739,7 +787,8 @@ const Project = () => {
   useEffect(() => {
     if (!location.state?.project?._id) return;
 
-    initializeSocket(location.state.project._id);
+    const socket = initializeSocket(location.state.project._id);
+    setSocket(socket);
 
     const initWebContainer = async () => {
       try {
@@ -809,6 +858,9 @@ const Project = () => {
     return () => {
       if (runProcess) {
         runProcess.kill();
+      }
+      if (socket) {
+        socket.disconnect();
       }
     };
   }, [location.state?.project?._id]);
@@ -1019,7 +1071,6 @@ const Project = () => {
       </div>
     );
   };
-
   // VS Code-like editor
   const renderEditor = () => {
     const getFileContent = () => {

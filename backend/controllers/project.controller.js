@@ -2,6 +2,49 @@ import projectModel from "../models/project.model.js";
 import * as projectService from "../services/project.service.js";
 import userModel from "../models/user.model.js";
 import { validationResult } from "express-validator";
+import * as aiService from "../services/ai.service.js";
+
+export const generateDocs = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const result = await aiService.generateDocumentation(code);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const optimizeCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const result = await aiService.optimizeCode(code);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getProjectAnalytics = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const analytics = await projectService.getProjectAnalytics(projectId);
+    res.json(analytics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getAvailableTemplates = async (req, res) => {
+  try {
+    res.json([
+      { id: "react-app", name: "React Application" },
+      { id: "node-server", name: "Node.js Server" },
+      { id: "empty", name: "Empty Project" },
+    ]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 export const createProject = async (req, res) => {
   const errors = validationResult(req);
@@ -104,6 +147,27 @@ export const updateFileTree = async (req, res) => {
 
     return res.status(200).json({
       project,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// delete project controller
+export const deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const loggedInUser = await userModel.findOne({ email: req.user.email });
+
+    const deletedProject = await projectService.deleteProject({
+      projectId: id,
+      userId: loggedInUser._id,
+    });
+
+    return res.status(200).json({
+      message: "Project deleted successfully",
+      project: deletedProject,
     });
   } catch (err) {
     console.log(err);
