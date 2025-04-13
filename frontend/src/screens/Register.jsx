@@ -65,11 +65,7 @@ const Register = () => {
               Password
             </label>
             <input
-<<<<<<< HEAD
               onChange={(e) => setPassword(e.target.value)}
-=======
-              onChange={(e) => setPassword(e.target.value)} 
->>>>>>> 2e1a43d80b63c8c59cc5785c28d175a0c37fadbf
               type="password"
               id="password"
               className="w-full p-4 rounded-xl bg-white/5 text-purple-50 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent placeholder-purple-200/30 transition-all duration-200"
