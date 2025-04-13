@@ -1578,10 +1578,13 @@ const Project = () => {
                 style={{ backgroundColor: currentTheme.background }}
               >
                 {users
-                  .filter(user =>
-                    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
+                  .filter(user => {
+                    if (!user) return false; // Skip if user is undefined/null
+                    const name = String(user.name || '').toLowerCase();
+                    const email = String(user.email || '').toLowerCase();
+                    const search = String(searchTerm || '').toLowerCase();
+                    return name.includes(search) || email.includes(search);
+                  })
                   .map(userItem => (
                     <div
                       key={userItem._id}
